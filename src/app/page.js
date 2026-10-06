@@ -43,6 +43,21 @@ export default function Home() {
     });
   }
 
+  function updateFix(id, content) {
+    setResult((prev) => ({
+      ...prev,
+      findings: prev.findings.map((f) =>
+        f.id === id ? { ...f, fix: { ...f.fix, content } } : f,
+      ),
+    }));
+    // A new version hasn't been applied yet
+    setApplied((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }
+
   const remaining = result
     ? result.findings.filter((f) => !applied.has(f.id))
     : [];
@@ -98,8 +113,10 @@ export default function Home() {
               <FindingCard
                 key={f.id}
                 finding={f}
+                context={result.context}
                 applied={applied.has(f.id)}
                 onToggleApplied={() => toggleApplied(f.id)}
+                onUpdateFix={updateFix}
               />
             ))}
           </div>
