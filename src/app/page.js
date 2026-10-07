@@ -1,11 +1,17 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AuditForm from "@/components/AuditForm";
 import ScoreCard from "@/components/ScoreCard";
 import FindingCard from "@/components/FindingCard";
+import HistoryList from "@/components/HistoryList";
 import { computeScore } from "@/lib/score";
+import { ownerHeaders } from "@/lib/owner";
 
 const CATEGORIES = ["all", "conversion", "seo", "trust", "ux"];
+
+function snapshot(findings, appliedIds) {
+  return JSON.stringify({ applied: [...appliedIds].sort(), findings });
+}
 
 export default function Home() {
   const [result, setResult] = useState(null);
@@ -13,6 +19,16 @@ export default function Home() {
   const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [historyKey, setHistoryKey] = useState(0);
+  const lastSaved = useRef("");
+
+  function show(data) {
+    const ids = new Set(data.applied ?? []);
+    lastSaved.current = snapshot(data.findings, ids);
+    setApplied(ids);
+    setResult(data);
+    setFilter("all");
+  }
 
   async function runAudit(input) {
     setLoading(true);
@@ -22,16 +38,30 @@ export default function Home() {
     try {
       const res = await fetch("/api/audit", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: ownerHeaders(),
         body: JSON.stringify(input),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Audit failed");
-      setResult(data);
+      show(data);
+      setHistoryKey((k) => k + 1);
     } catch (e) {
       setError(e.message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function openSaved(id) {
+    setError(null);
+    try {
+      const res = await fetch(`/api/audits/${id}`, { headers: ownerHeaders() });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not open audit");
+      show(data);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (e) {
+      setError(e.message);
     }
   }
 
@@ -50,13 +80,35 @@ export default function Home() {
         f.id === id ? { ...f, fix: { ...f.fix, content } } : f,
       ),
     }));
-    // A new version hasn't been applied yet
     setApplied((prev) => {
       const next = new Set(prev);
       next.delete(id);
       return next;
     });
   }
+
+  // Autosave progress (applied fixes and regenerated copy) shortly after any change
+  useEffect(() => {
+    if (!result?.id) return;
+    const current = snapshot(result.findings, applied);
+    if (current === lastSaved.current) return;
+
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/audits/${result.id}`, {
+          method: "PATCH",
+          headers: ownerHeaders(),
+          body: current,
+        });
+        if (res.ok) {
+          lastSaved.current = current;
+          setHistoryKey((k) => k + 1);
+        }
+      } catch {}
+    }, 700);
+
+    return () => clearTimeout(t);
+  }, [applied, result]);
 
   const remaining = result
     ? result.findings.filter((f) => !applied.has(f.id))
@@ -84,6 +136,13 @@ export default function Home() {
 
       {result && (
         <>
+          {!result.id && (
+            <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
+              This audit couldn&apos;t be saved to your history, but it&apos;s
+              fully usable here.
+            </div>
+          )}
+
           <ScoreCard
             score={liveScore}
             summary={result.summary}
@@ -122,6 +181,15 @@ export default function Home() {
           </div>
         </>
       )}
+
+      <HistoryList
+        refreshKey={historyKey}
+        activeId={result?.id}
+        onSelect={openSaved}
+        onDeleted={(id) => {
+          if (result?.id === id) setResult(null);
+        }}
+      />
     </main>
   );
 }
