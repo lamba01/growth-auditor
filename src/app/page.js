@@ -6,11 +6,41 @@ import FindingCard from "@/components/FindingCard";
 import HistoryList from "@/components/HistoryList";
 import { computeScore } from "@/lib/score";
 import { ownerHeaders } from "@/lib/owner";
-
-const CATEGORIES = ["all", "conversion", "seo", "trust", "ux"];
+import { CATEGORY_LABELS, CATEGORY_ORDER } from "@/lib/labels";
 
 function snapshot(findings, appliedIds) {
   return JSON.stringify({ applied: [...appliedIds].sort(), findings });
+}
+
+function Logo() {
+  return (
+    <svg viewBox="0 0 28 28" className="h-7 w-7" aria-hidden="true">
+      <rect width="28" height="28" rx="8" fill="#17433a" />
+      <rect x="7" y="14" width="3.5" height="7" rx="1.2" fill="#f2f4f1" />
+      <rect x="12.25" y="10" width="3.5" height="11" rx="1.2" fill="#f2f4f1" />
+      <rect x="17.5" y="6" width="3.5" height="15" rx="1.2" fill="#f2f4f1" />
+    </svg>
+  );
+}
+
+function ReportSkeleton() {
+  return (
+    <div
+      className="mt-14 grid gap-10 lg:grid-cols-[340px_minmax(0,1fr)] lg:gap-14"
+      aria-hidden="true"
+    >
+      <div className="h-[460px] animate-pulse rounded-3xl bg-line/60" />
+      <div className="space-y-4">
+        {[0, 1, 2, 3, 4].map((i) => (
+          <div
+            key={i}
+            className="h-16 animate-pulse rounded-xl bg-line/60"
+            style={{ opacity: 1 - i * 0.16 }}
+          />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export default function Home() {
@@ -87,7 +117,7 @@ export default function Home() {
     });
   }
 
-  // Autosave progress (applied fixes and regenerated copy) shortly after any change
+  // Autosave progress (fixed items and rewritten copy) shortly after any change
   useEffect(() => {
     if (!result?.id) return;
     const current = snapshot(result.findings, applied);
@@ -118,68 +148,106 @@ export default function Home() {
     ? result.findings.filter((f) => filter === "all" || f.category === filter)
     : [];
 
+  const tabs = result
+    ? [
+        { key: "all", label: "All", count: result.findings.length },
+        ...CATEGORY_ORDER.map((key) => ({
+          key,
+          label: CATEGORY_LABELS[key],
+          count: result.findings.filter((f) => f.category === key).length,
+        })).filter((t) => t.count > 0),
+      ]
+    : [];
+
   return (
-    <main className="mx-auto max-w-3xl space-y-6 px-4 py-10">
-      <header>
-        <h1 className="text-3xl font-bold">Website Growth Auditor</h1>
-        <p className="text-gray-600">
-          Find what&apos;s costing you traffic and conversions, with fixes you
-          can use.
-        </p>
+    <div className="mx-auto max-w-6xl px-5 pb-24 sm:px-8">
+      <header className="flex items-center gap-2.5 py-6">
+        <Logo />
+        <span className="text-lg font-semibold tracking-tight">
+          Growth Auditor
+        </span>
       </header>
 
-      <AuditForm onSubmit={runAudit} loading={loading} />
+      <section className="max-w-3xl pb-10 pt-8 sm:pt-14">
+        <h1 className="text-4xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">
+          Find what&apos;s costing your site customers.
+        </h1>
+        <p className="mt-5 max-w-xl font-prose text-xl leading-relaxed text-muted">
+          Audit any page for SEO, conversion, trust, and design problems. Every
+          finding comes with copy you can paste in.
+        </p>
+      </section>
+
+      <div className="max-w-3xl">
+        <AuditForm onSubmit={runAudit} loading={loading} />
+      </div>
 
       {error && (
-        <div className="rounded-lg bg-red-50 p-4 text-red-700">{error}</div>
+        <div
+          role="alert"
+          className="mt-6 max-w-3xl rounded-2xl border border-bad/30 bg-bad/5 p-5"
+        >
+          <p className="font-medium text-bad">The audit didn&apos;t complete</p>
+          <p className="mt-1 text-sm">{error}</p>
+        </div>
       )}
 
-      {result && (
-        <>
+      {loading && <ReportSkeleton />}
+
+      {result && !loading && (
+        <div className="mt-14">
           {!result.id && (
-            <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
-              This audit couldn&apos;t be saved to your history, but it&apos;s
-              fully usable here.
-            </div>
+            <p className="mb-6 rounded-2xl border border-warn/30 bg-warn/5 p-4 text-sm">
+              This audit wasn&apos;t saved to your history. You can still use it
+              on this page.
+            </p>
           )}
 
-          <ScoreCard
-            score={liveScore}
-            summary={result.summary}
-            url={result.url}
-            fixedCount={applied.size}
-            total={result.findings.length}
-          />
-
-          <div className="flex flex-wrap gap-2 text-sm">
-            {CATEGORIES.map((c) => (
-              <button
-                key={c}
-                onClick={() => setFilter(c)}
-                className={`rounded-full border px-3 py-1 ${
-                  filter === c
-                    ? "bg-black text-white border-black"
-                    : "border-gray-300 text-gray-600"
-                }`}
-              >
-                {c}
-              </button>
-            ))}
-          </div>
-
-          <div className="space-y-3">
-            {visible.map((f) => (
-              <FindingCard
-                key={f.id}
-                finding={f}
-                context={result.context}
-                applied={applied.has(f.id)}
-                onToggleApplied={() => toggleApplied(f.id)}
-                onUpdateFix={updateFix}
+          <div className="grid gap-10 lg:grid-cols-[340px_minmax(0,1fr)] lg:gap-14">
+            <aside className="lg:sticky lg:top-8 lg:self-start">
+              <ScoreCard
+                score={liveScore}
+                summary={result.summary}
+                url={result.url}
+                findings={result.findings}
+                applied={applied}
               />
-            ))}
+            </aside>
+
+            <section aria-label="Findings">
+              <div className="flex flex-wrap gap-x-6 border-b border-line">
+                {tabs.map((t) => (
+                  <button
+                    key={t.key}
+                    type="button"
+                    onClick={() => setFilter(t.key)}
+                    aria-pressed={filter === t.key}
+                    className={`-mb-px border-b-2 px-0.5 pb-3 text-sm font-medium transition-colors ${
+                      filter === t.key
+                        ? "border-ink text-ink"
+                        : "border-transparent text-muted hover:text-ink"
+                    }`}
+                  >
+                    {t.label} <span className="ml-1 text-muted">{t.count}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div>
+                {visible.map((f) => (
+                  <FindingCard
+                    key={f.id}
+                    finding={f}
+                    context={result.context}
+                    applied={applied.has(f.id)}
+                    onToggleApplied={() => toggleApplied(f.id)}
+                    onUpdateFix={updateFix}
+                  />
+                ))}
+              </div>
+            </section>
           </div>
-        </>
+        </div>
       )}
 
       <HistoryList
@@ -190,6 +258,6 @@ export default function Home() {
           if (result?.id === id) setResult(null);
         }}
       />
-    </main>
+    </div>
   );
 }

@@ -1,1 +1,67 @@
 @import "tailwindcss";
+
+@theme inline {
+  --color-chalk: #f2f4f1;
+  --color-paper: #fbfcfa;
+  --color-ink: #14231f;
+  --color-muted: #5c6b66;
+  --color-line: #d9dfda;
+  --color-spruce: #17433a;
+  --color-spruce-hover: #0f312a;
+  --color-good: #2e7d5b;
+  --color-warn: #b7791f;
+  --color-bad: #b9381f;
+  --color-steel: #6b7b8c;
+
+  --font-sans: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-prose: var(--font-newsreader), Georgia, serif;
+}
+
+body {
+  background: var(--color-chalk);
+  color: var(--color-ink);
+}
+
+::selection {
+  background: var(--color-spruce);
+  color: var(--color-chalk);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-spruce);
+  outline-offset: 2px;
+}
+
+/* The gauge arc sweeps in once on load, then transitions when the score changes */
+@keyframes gauge-sweep {
+  from {
+    stroke-dashoffset: var(--gauge-len);
+  }
+}
+.gauge-arc {
+  animation: gauge-sweep 1.1s cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition:
+    stroke-dashoffset 0.7s cubic-bezier(0.2, 0.7, 0.2, 1),
+    stroke 0.4s;
+}
+
+/* Expanding a finding */
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+.reveal {
+  animation: reveal 0.28s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
