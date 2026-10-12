@@ -29,7 +29,7 @@ function ReportSkeleton() {
       className="mt-14 grid gap-10 lg:grid-cols-[340px_minmax(0,1fr)] lg:gap-14"
       aria-hidden="true"
     >
-      <div className="h-[460px] animate-pulse rounded-3xl bg-line/60" />
+      <div className="h-115 animate-pulse rounded-3xl bg-line/60" />
       <div className="space-y-4">
         {[0, 1, 2, 3, 4].map((i) => (
           <div
@@ -51,6 +51,7 @@ export default function Home() {
   const [error, setError] = useState(null);
   const [historyKey, setHistoryKey] = useState(0);
   const lastSaved = useRef("");
+  const [usage, setUsage] = useState(null);
 
   function show(data) {
     const ids = new Set(data.applied ?? []);
@@ -74,6 +75,7 @@ export default function Home() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Audit failed");
       show(data);
+      setUsage(data.usage ?? null);
       setHistoryKey((k) => k + 1);
     } catch (e) {
       setError(e.message);
@@ -189,6 +191,14 @@ export default function Home() {
         >
           <p className="font-medium text-bad">The audit didn&apos;t complete</p>
           <p className="mt-1 text-sm">{error}</p>
+          <div className="max-w-3xl">
+            <AuditForm onSubmit={runAudit} loading={loading} />
+            {usage?.limit && (
+              <p className="mt-3 px-1 text-sm text-muted">
+                {usage.remaining} of {usage.limit} free audits left today.
+              </p>
+            )}
+          </div>
         </div>
       )}
 
