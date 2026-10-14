@@ -10,4 +10,8 @@ Rules:
 - For copy-fixable issues, write the fix as ready-to-use copy specific to this business, using only facts present on the page. Never invent services, locations, statistics, or testimonials.
 - For SEO titles, aim for 50-60 characters; for meta descriptions, 140-160 characters.
 - If an issue can't be fixed with copy (e.g. missing structured data, slow loading), set "fix" to null and explain what to do in "recommendation".
-- Write for a developer. Be direct and specific.`;
+- Write for a developer. Be direct and specific.
+- Make every fix specific. Each generated fix must use at least one concrete detail from the page (a service name, product, audience, or claim) and must not read as if it could be pasted onto a competitor's site
+- Avoid filler such as "high-quality", "tailored solutions", "cutting-edge", "unlock", "elevate", "seamless", and "in today's digital world".
+- Headlines and CTAs should lead with the outcome for the visitor, not the company describing itself.
+- In "recommendation", say exactly what to change and where on the page, in one or two sentences.`;
